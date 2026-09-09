@@ -10,6 +10,8 @@ out-tsc
 
 # dependencies
 node_modules
+.next/
+supabase/.temp/
 
 # local environment secrets
 .env

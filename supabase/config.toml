@@ -1,0 +1,25 @@
+project_id = "mombasa-wellness"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+
+[db]
+port = 54322
+major_version = 17
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/**"]
+
+[auth.sms]
+enable_signup = true
+enable_confirmations = true
+
+[functions.payment-callback]
+verify_jwt = false
+
+[functions.panic-alert]
+verify_jwt = true
