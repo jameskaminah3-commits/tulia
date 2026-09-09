@@ -1,0 +1,54 @@
+6. The availability & scheduling engine
+One question, answered correctly: given a treatment, a date, a delivery mode and a location, which therapist/time combinations can we actually honour?
+6.1 Inputs
+Constraint
+Source
+Therapist declared working hours
+availability_windows where is_blocked = false
+Therapist time off
+availability_windows where is_blocked = true
+Existing bookings
+bookings.blocked_range , statuses confirmed / in_progress
+Travel time between consecutive jobs
+zone_travel_matrix
+Studio room capacity
+rooms plus room-level conflict check
+Skill requirement
+treatments.requires_skill vs therapist_skills
+Delivery mode eligibility
+therapists.serves_studio / serves_home / serves_hotel
+Client gender preference
+Request parameter vs therapists.gender
+Valid, unexpired credentials
+therapist_credentials — see 6.2
+6.2 Eligibility gate
+Before any time arithmetic, reduce the therapist set. A therapist is eligible only if active, vetted, mode-capable, skill-matched, gender-matched, and
+holding current credentials of every required kind.
+create or replace function eligible_therapists(
+  p_treatment_id uuid, p_mode delivery_mode, p_gender text default null
+) returns setof therapists
+language sql stable as $$
+  select t.* from therapists t
+  where t.is_active
+    and t.vetted_at is not null
+    and case p_mode when 'studio' then t.serves_studio
+                    when 'home'   then t.serves_home
+                    else t.serves_hotel end
+    and (p_gender is null or t.gender = p_gender)
+    and not exists (                      -- no expired mandatory credential
+      select 1 from therapist_credentials c
+      where c.therapist_id = t.id
+        and c.kind in ('tvet_cdacc','good_conduct','insurance')
+        and (c.verified_at is null or c.expires_on < current_date)
+    )
+    and (
+      (select requires_skill from treatments where id = p_treatment_id) is null
+      or exists (select 1 from therapist_skills s
+                 where s.therapist_id = t.id
+                   and s.skill = (select requires_skill from treatments
+                                  where id = p_treatment_id))
+    );
+$$;
+6.3 Travel: use the zone table, not a maps API
+Mombasa's geography is effectively linear: the island, then north through Nyali, Bamburi, Shanzu and on to Mtwapa, with a small number of crossing
+bottlenecks. A five-by-five lookup table captures this well enough and costs nothing.

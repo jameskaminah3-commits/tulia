@@ -1,0 +1,54 @@
+2. System architecture
+                    ┌──────────────────────────────────────────┐
+                    │            CLIENT DEVICES                │
+                    │  Client PWA · Therapist PWA · Ops console │
+                    └────────────────────┬─────────────────────┘
+                                         │ HTTPS
+                    ┌────────────────────▼─────────────────────┐
+                    │      Next.js app (App Router)            │
+                    │      hosted on Vercel                    │
+                    │  · Server Components for reads           │
+                    │  · Route Handlers for privileged writes  │
+                    └───────┬──────────────────────┬───────────┘
+                            │ supabase-js          │ service role
+                            │ (anon key + RLS)     │ (server only)
+                    ┌───────▼──────────────────────▼───────────┐
+                    │              SUPABASE                    │
+                    │  Postgres · Auth · Storage · Realtime     │
+                    │  Edge Functions · pg_cron                 │
+                    └───┬───────────┬──────────┬───────────────┘
+                        │           │          │
+          ┌─────────────▼──┐  ┌─────▼──────┐  ┌▼─────────────────┐
+          │ M-Pesa Daraja  │  │  WhatsApp  │  │  DPO / Flutterwave│
+          │ (via Pesapal   │  │ Cloud API  │  │  cards + FX       │
+          │  or IntaSend)  │  │            │  │                   │
+          └────────────────┘  └────────────┘  └───────────────────┘
+                        │
+          ┌─────────────▼────────────────────┐
+          │  Africa's Talking                │
+          │  SMS fallback · number masking   │
+          └──────────────────────────────────┘
+2.1 Component responsibilities
+Component
+Responsibility
+Next.js / Vercel
+All three UIs. Server Components read through the user's own session so RLS applies. Route Handlers hold anything
+needing the service role or a third-party secret.
+Supabase Postgres
+Single source of truth. Business invariants enforced as constraints, not application code.
+Supabase Auth
+Phone OTP for clients and therapists, email+password for ops. One profiles row per auth.users row carrying
+the role.
+Supabase Edge Functions
+Public webhook receivers (payment callbacks, WhatsApp inbound). These must be reachable by third parties, so they
+cannot live behind our auth.
+pg_cron
+Reminder dispatch, payment reconciliation sweep, availability materialisation. Replaces a separate worker service at
+our volume.
+Supabase Realtime
+Ops console live board only. Do not use it for the client booking flow.
+Supabase Storage
+Therapist photos, credential scans, treatment imagery. Credential scans go in a private bucket.
+A RULE TO HOLD TO
+The service role key never leaves the server. Not in a Client Component, not in NEXT_PUBLIC_ , not in the therapist PWA. If a feature seems to need it client-
+side, the feature is designed wrong — move it into a Route Handler or an RPC.

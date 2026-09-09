@@ -1,0 +1,54 @@
+create table profiles (
+  id          uuid primary key references auth.users(id) on delete cascade,
+  role        user_role not null default 'client',
+  full_name   text not null,
+  phone       text unique not null,
+  created_at  timestamptz not null default now()
+);
+create table clients (
+  id                uuid primary key references profiles(id) on delete cascade,
+  email             text,
+  -- Commercial evidence. See the partnership agreement: we must be able to
+  -- prove which clients the platform introduced.
+  acquired_via      text not null default 'app',
+  is_pre_existing   boolean not null default false,
+  id_document_type  text,      -- 'national_id' | 'passport'
+  id_document_no    text,      -- encrypted at rest, see section 11
+  phone_verified_at timestamptz,
+  id_verified_at    timestamptz,
+  payment_verified_at timestamptz,
+  is_banned         boolean not null default false,
+  ban_reason        text,
+  notes             text
+);
+create table therapists (
+  id                uuid primary key references profiles(id) on delete cascade,
+  display_name      text not null,
+  bio               text,
+  photo_path        text,             -- Supabase Storage, public bucket
+  gender            text,             -- for client preference matching
+  home_zone         text references zones(id),
+  serves_home       boolean not null default false,
+  serves_hotel      boolean not null default false,
+  serves_studio     boolean not null default true,
+  commission_rate   numeric(4,3) not null default 0.620,  -- therapist share
+  is_active         boolean not null default false,       -- false until vetted
+  vetted_at         timestamptz,
+  masked_phone      text              -- Africa's Talking proxy number
+);
+create table therapist_credentials (
+  id             uuid primary key default gen_random_uuid(),
+  therapist_id   uuid not null references therapists(id) on delete cascade,
+  kind           text not null,   -- 'tvet_cdacc','knec','good_conduct','insurance','health'
+  issuer         text,
+  reference_no   text,
+  issued_on      date,
+  expires_on     date,
+  scan_path      text,            -- PRIVATE storage bucket
+  verified_by    uuid references profiles(id),
+  verified_at    timestamptz
+);
+WHY CREDENTIALS ARE THEIR OWN TABLE
+They expire. A therapist whose good-conduct certificate or insurance has lapsed must drop out of the availability query automatically, not by someone
+remembering. Section 6.2 encodes that.
+4.4 Catalogue and pricing

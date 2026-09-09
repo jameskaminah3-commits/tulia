@@ -1,0 +1,14 @@
+IDEMPOTENCY IS MANDATORY
+Providers retry callbacks, sometimes several times, sometimes out of order, and occasionally a callback arrives before our initiate() call has returned. The
+unique (provider, provider_ref) constraint plus an upsert handles this. Never process a callback with a plain insert , and never assume a
+payment row already exists when the callback lands.
+8.4 Reconciliation sweep
+A pg_cron job every two minutes selects payments in pending or timed_out older than 120 seconds, calls queryStatus() , and settles them. This
+job is what protects us from silent money loss. Alert ops on any payment unresolved after 30 minutes.
+8.5 Payouts
+Weekly, Monday, covering the previous Monday to Sunday. For each therapist, sum completed bookings, apply therapists.commission_rate , add
+tips, produce a payouts row in draft .
+Ops approves each batch manually before any money moves. At this volume, automated disbursement is unnecessary risk. Automate later, once the
+numbers have been visibly correct for three months.
+Execution via provider B2C, or manually through the M-Pesa portal at launch — the console just needs to record the reference.
+Therapists see their own payout history in the therapist app, itemised by booking. This is a retention feature; make it clear and never late.

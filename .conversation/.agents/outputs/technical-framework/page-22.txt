@@ -1,0 +1,34 @@
+13. 12-week delivery plan
+Weeks
+Focus
+Deliverables
+1–2
+Foundations
+Supabase projects, full schema with RLS and exclusion constraints, auth with phone OTP, seed
+data, CI, Vercel deploys, payment provider interface (no implementation), Sentry
+3–5
+Booking core
+Treatment catalogue with three-mode pricing, eligible_therapists , availability RPC with
+zone travel and both legs, booking RPC, client booking flow end to end, therapist profiles with
+credentials displayed, cancellation policy
+6–7
+Payments
+M-Pesa via aggregator, card via DPO, callback Edge Function with signature verification and
+idempotency, reconciliation sweep, refunds, all six failure paths tested
+8–9
+Therapist app
+Availability management, job offers and acceptance, check-in/out with GPS, panic button and
+alert path, earnings ledger, session watchdog
+10–11
+WhatsApp & ops
+Notification queue and dispatcher, all seven message templates approved and live, SMS
+fallback, number masking, ops console (live board, manual booking, exception handling,
+incident log, draft payout runs)
+12
+Hardening & launch
+Partner booking links with commission tracking, staff training, load sanity check, DPIA
+documented, existing clients migrated, soft launch
+DEPENDENCIES TO START IN WEEK ONE
+Three items have external lead times that will otherwise block launch: WhatsApp template approval (days to weeks), payment provider onboarding and live
+credentials (2–6 weeks for direct Daraja, faster via an aggregator), and Africa's Talking virtual number allocation. Begin all three in week one, before the code
+that needs them exists.

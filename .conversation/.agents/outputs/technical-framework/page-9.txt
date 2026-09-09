@@ -1,0 +1,64 @@
+4.6 Sessions, money, safety
+create table session_logs (
+  booking_id     uuid primary key references bookings(id) on delete cascade,
+  checked_in_at  timestamptz,
+  check_in_lat   numeric(9,6),
+  check_in_lng   numeric(9,6),
+  checked_out_at timestamptz,
+  check_out_lat  numeric(9,6),
+  check_out_lng  numeric(9,6),
+  therapist_notes text
+);
+create table payments (
+  id                  uuid primary key default gen_random_uuid(),
+  booking_id          uuid not null references bookings(id),
+  provider            text not null,             -- 'pesapal','intasend','dpo'
+  method              text not null,             -- 'mpesa','card'
+  amount_kes          int not null,
+  currency            text not null default 'KES',
+  status              payment_status not null default 'pending',
+  provider_ref        text,                      -- CheckoutRequestID / order tracking id
+  provider_receipt    text,                      -- M-Pesa receipt number
+  raw_callback        jsonb,
+  created_at          timestamptz not null default now(),
+  settled_at          timestamptz,
+  constraint uniq_provider_ref unique (provider, provider_ref)
+);
+create table payouts (
+  id             uuid primary key default gen_random_uuid(),
+  therapist_id   uuid not null references therapists(id),
+  period_start   date not null,
+  period_end     date not null,
+  gross_kes      int not null,
+  commission_kes int not null,
+  tips_kes       int not null default 0,
+  net_kes        int not null,
+  status         text not null default 'draft',  -- draft|approved|sent|failed
+  mpesa_ref      text,
+  approved_by    uuid references profiles(id),
+  sent_at        timestamptz,
+  unique (therapist_id, period_start, period_end)
+);
+create table incidents (
+  id            uuid primary key default gen_random_uuid(),
+  booking_id    uuid references bookings(id),
+  raised_by     uuid references profiles(id),
+  kind          text not null,   -- 'panic','misconduct','safety','no_show','complaint'
+  severity      text not null,   -- 'low','medium','high','critical'
+  description   text,
+  action_taken  text,
+  resolved_at   timestamptz,
+  created_at    timestamptz not null default now()
+);
+create table ratings (
+  booking_id      uuid primary key references bookings(id) on delete cascade,
+  client_score    int check (client_score between 1 and 5),   -- client rates therapist
+  client_comment  text,
+  therapist_score int check (therapist_score between 1 and 5),-- therapist rates client
+  therapist_note  text,                                       -- OPS ONLY, never shown
+  tip_kes         int not null default 0,
+  created_at      timestamptz not null default now()
+);
+TWO COLUMNS THAT MATTER COMMERCIALLY
+bookings.origin and clients.acquired_via are how we calculate commission correctly and settle any dispute with the operating partner. They are
+not analytics nice-to-haves. Populate them on every write path, including ops-created bookings.

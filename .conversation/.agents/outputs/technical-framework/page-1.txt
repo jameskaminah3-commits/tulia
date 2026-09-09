@@ -1,0 +1,9 @@
+E N G I N E E R I N G B R I E F · C O N F I D E N T I A L
+Wellness Booking Platform
+Technical Framework
+Architecture, data model, scheduling engine and integration specification
+for the Mombasa studio & mobile massage service
+Audience: Engineering team
+Stack: Next.js · Supabase (Postgres) · M-Pesa Daraja · WhatsApp Cloud API
+Version: 1.0 — September 2026
+Status: For review before sprint planning

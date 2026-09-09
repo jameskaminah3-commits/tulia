@@ -1,0 +1,82 @@
+5. Row Level Security model
+RLS is on for every table, without exception, from the first migration. A table with RLS disabled is a table exposed to anyone holding the anon key, which is
+shipped in the browser bundle.
+5.1 Helper functions
+create or replace function auth_role() returns user_role
+language sql stable security definer set search_path = public as $$
+  select role from profiles where id = auth.uid()
+$$;
+create or replace function is_staff() returns boolean
+language sql stable as $$ select auth_role() in ('ops','admin') $$;
+5.2 Policy matrix
+Table
+Client
+Therapist
+Ops / Admin
+Anon
+treatments, treatment_pricing
+read
+read
+read/write
+read
+therapists (public view)
+read active
+read active
+read/write
+read active
+therapist_credentials
+—
+read own
+read/write
+—
+bookings
+read/insert own
+read assigned, update
+status only
+full
+—
+clients
+read/update own
+read limited view for
+assigned booking
+full
+—
+payments
+read own
+—
+full
+—
+payouts
+—
+read own
+full
+—
+incidents
+—
+insert own
+full
+—
+ratings
+read/write own (client
+fields)
+write therapist fields
+full
+—
+5.3 Representative policies
+alter table bookings enable row level security;
+create policy "clients read own bookings" on bookings for select
+  using ( client_id = auth.uid() );
+create policy "clients create own bookings" on bookings for insert
+  with check ( client_id = auth.uid() and status = 'pending_payment' );
+create policy "therapists read assigned bookings" on bookings for select
+  using ( therapist_id = auth.uid() );
+create policy "therapists update own booking status" on bookings for update
+  using ( therapist_id = auth.uid() )
+  with check ( therapist_id = auth.uid()
+               and status in ('in_progress','completed') );
+create policy "staff full access" on bookings for all
+  using ( is_staff() ) with check ( is_staff() );
+CLIENT PII EXPOSURE TO THERAPISTS
+A therapist needs the client's first name, the address and the access notes — and nothing else. Do not grant select on clients to therapists. Expose a
+security-definer view ( therapist_booking_view ) that returns only those fields, only for bookings assigned to them, and only within a window around the
+appointment time. The client's phone number is never exposed; the therapist calls through the masked number (§9.3).

@@ -1,0 +1,69 @@
+create table treatments (
+  id            uuid primary key default gen_random_uuid(),
+  slug          text unique not null,
+  name          text not null,
+  description   text,
+  duration_min  int not null,           -- service time only
+  turnaround_min int not null default 15, -- room reset / linen change
+  requires_skill text,                  -- null, or matches therapist_skills.skill
+  is_active     boolean not null default true,
+  sort_order    int not null default 0
+);
+create table treatment_pricing (
+  treatment_id  uuid references treatments(id) on delete cascade,
+  mode          delivery_mode not null,
+  price_kes     int not null,
+  is_available  boolean not null default true,
+  primary key (treatment_id, mode)
+);
+create table therapist_skills (
+  therapist_id uuid references therapists(id) on delete cascade,
+  skill        text not null,  -- 'deep_tissue','prenatal','hot_stone','sports','reflexology'
+  primary key (therapist_id, skill)
+);
+create table rooms (
+  id        uuid primary key default gen_random_uuid(),
+  name      text not null,        -- 'Room 1', 'Room 2'
+  is_active boolean not null default true
+);
+4.5 Availability and bookings
+The two range columns on bookings are the heart of the system. service_range is when the treatment actually happens. blocked_range extends
+it by turnaround and outbound travel, and is what conflict detection uses.
+create table availability_windows (
+  id           uuid primary key default gen_random_uuid(),
+  therapist_id uuid not null references therapists(id) on delete cascade,
+  window       tstzrange not null,
+  is_blocked   boolean not null default false,  -- true = time off, false = working
+  note         text,
+  exclude using gist (therapist_id with =, window with &&)
+);
+create table bookings (
+  id             uuid primary key default gen_random_uuid(),
+  reference      text unique not null,            -- human-friendly, e.g. 'MB-4T7K'
+  client_id      uuid not null references clients(id),
+  therapist_id   uuid not null references therapists(id),
+  treatment_id   uuid not null references treatments(id),
+  mode           delivery_mode not null,
+  status         booking_status not null default 'pending_payment',
+  origin         booking_origin not null default 'app',
+  partner_id     uuid references partners(id),
+  service_range  tstzrange not null,
+  blocked_range  tstzrange not null,              -- service + turnaround + travel
+  room_id        uuid references rooms(id),       -- required when mode = 'studio'
+  zone_id        text references zones(id),       -- required when mode != 'studio'
+  address_line   text,
+  address_notes  text,
+  hotel_name     text,
+  hotel_room_no  text,
+  price_kes      int not null,
+  therapist_share_kes int,                        -- frozen at completion
+  platform_share_kes  int,
+  created_at     timestamptz not null default now(),
+  confirmed_at   timestamptz,
+  cancelled_at   timestamptz,
+  cancelled_by   uuid references profiles(id),
+  cancellation_fee_kes int not null default 0,
+  constraint studio_needs_room check (mode <> 'studio' or room_id is not null),
+  constraint mobile_needs_zone check (mode =  'studio' or zone_id is not null),
+  constraint blocked_contains_service check (blocked_range @> service_range)
+);

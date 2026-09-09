@@ -3,20 +3,22 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Core booking and operations API for the Mombasa wellness service
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: catalog
+  - name: availability
+  - name: bookings
+  - name: operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +26,281 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /treatments:
+    get:
+      operationId: listTreatments
+      tags: [catalog]
+      summary: List treatments
+      responses:
+        "200":
+          description: Treatment catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Treatment"
+  /availability:
+    get:
+      operationId: getAvailability
+      tags: [availability]
+      summary: Find availability-aware booking slots
+      parameters:
+        - $ref: "#/components/parameters/DateParam"
+        - name: treatmentId
+          in: query
+          required: true
+          schema: { type: string }
+        - name: mode
+          in: query
+          required: true
+          schema: { $ref: "#/components/schemas/DeliveryMode" }
+        - name: zone
+          in: query
+          required: false
+          schema: { type: ["string", "null"] }
+        - name: genderPref
+          in: query
+          required: false
+          schema: { type: ["string", "null"] }
+      responses:
+        "200":
+          description: Slots grouped by therapist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvailabilityResponse"
+  /bookings:
+    get:
+      operationId: listBookings
+      tags: [bookings]
+      summary: List recent bookings
+      parameters:
+        - name: scope
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [client, ops]
+            default: ops
+      responses:
+        "200":
+          description: Booking list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+    post:
+      operationId: createBooking
+      tags: [bookings]
+      summary: Create a booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingInput"
+      responses:
+        "201":
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "409":
+          description: Slot is no longer available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /bookings/{id}/status:
+    patch:
+      operationId: updateBookingStatus
+      tags: [bookings]
+      summary: Update a booking status
+      parameters:
+        - $ref: "#/components/parameters/BookingIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingStatusUpdate"
+      responses:
+        "200":
+          description: Updated booking
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "404":
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /operations/summary:
+    get:
+      operationId: getOperationsSummary
+      tags: [operations]
+      summary: Get operations dashboard summary
+      responses:
+        "200":
+          description: Operations summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsSummary"
+  /therapists:
+    get:
+      operationId: listTherapists
+      tags: [operations]
+      summary: List active therapists
+      responses:
+        "200":
+          description: Therapist list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Therapist"
 components:
+  parameters:
+    DateParam:
+      name: date
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+    BookingIdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
   schemas:
     HealthStatus:
       type: object
       properties:
+        status: { type: string }
+      required: [status]
+    DeliveryMode:
+      type: string
+      enum: [studio, home, hotel]
+    BookingStatus:
+      type: string
+      enum: [pending_payment, confirmed, in_progress, completed, cancelled, no_show]
+    Treatment:
+      type: object
+      required: [id, name, durationMin, priceKes, description, modeAvailability, featured]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        durationMin: { type: integer }
+        priceKes: { type: integer }
+        description: { type: string }
+        modeAvailability:
+          type: array
+          items: { $ref: "#/components/schemas/DeliveryMode" }
+        featured: { type: boolean }
+    Therapist:
+      type: object
+      required: [id, name, initials, rating, completedSessions, status, specialties, homeZone]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        initials: { type: string }
+        rating: { type: number }
+        completedSessions: { type: integer }
         status:
           type: string
+          enum: [available, on_job, offline]
+        specialties:
+          type: array
+          items: { type: string }
+        homeZone: { type: string }
+    AvailabilitySlot:
+      type: object
+      required: [id, start, end, therapistId, therapistName, therapistInitials, locationLabel, priceKes]
+      properties:
+        id: { type: string }
+        start: { type: string, format: date-time }
+        end: { type: string, format: date-time }
+        therapistId: { type: string }
+        therapistName: { type: string }
+        therapistInitials: { type: string }
+        locationLabel: { type: string }
+        priceKes: { type: integer }
+    AvailabilityResponse:
+      type: object
+      required: [date, slots, matchedTherapists]
+      properties:
+        date: { type: string, format: date }
+        slots:
+          type: array
+          items: { $ref: "#/components/schemas/AvailabilitySlot" }
+        matchedTherapists: { type: integer }
+    BookingInput:
+      type: object
+      required: [treatmentId, mode, date, start, therapistId, clientName, clientPhone]
+      properties:
+        treatmentId: { type: string }
+        mode: { $ref: "#/components/schemas/DeliveryMode" }
+        date: { type: string, format: date }
+        start: { type: string, format: date-time }
+        therapistId: { type: string }
+        clientName: { type: string, minLength: 2 }
+        clientPhone: { type: string, minLength: 7 }
+        zone: { type: ["string", "null"] }
+        addressLine: { type: ["string", "null"] }
+        hotelName: { type: ["string", "null"] }
+        hotelRoomNo: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+    BookingStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/BookingStatus" }
+    Booking:
+      type: object
       required:
-        - status
-
+        [id, reference, treatmentName, therapistName, clientName, clientPhone, mode, date, start, end, priceKes, status, locationLabel, createdAt]
+      properties:
+        id: { type: string }
+        reference: { type: string }
+        treatmentName: { type: string }
+        therapistName: { type: string }
+        clientName: { type: string }
+        clientPhone: { type: string }
+        mode: { $ref: "#/components/schemas/DeliveryMode" }
+        date: { type: string, format: date }
+        start: { type: string, format: date-time }
+        end: { type: string, format: date-time }
+        priceKes: { type: integer }
+        status: { $ref: "#/components/schemas/BookingStatus" }
+        locationLabel: { type: string }
+        createdAt: { type: string, format: date-time }
+    OperationsSummary:
+      type: object
+      required: [todayBookings, pendingPayments, liveTherapists, todaysRevenueKes, nextBooking, statusCounts]
+      properties:
+        todayBookings: { type: integer }
+        pendingPayments: { type: integer }
+        liveTherapists: { type: integer }
+        todaysRevenueKes: { type: integer }
+        nextBooking:
+          anyOf:
+            - $ref: "#/components/schemas/Booking"
+            - type: "null"
+        statusCounts:
+          type: object
+          additionalProperties: { type: integer }
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }

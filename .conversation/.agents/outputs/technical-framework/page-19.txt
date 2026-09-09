@@ -1,0 +1,51 @@
+10. Edge Functions and background jobs
+10.1 Edge Functions
+Function
+Auth
+Purpose
+payment-callback
+Signature
+Receives provider callbacks; verifies, upserts payment, confirms booking, queues
+notifications
+whatsapp-webhook
+Meta verify token
+Inbound messages and delivery receipts
+initiate-payment
+User JWT
+Creates the payment row and calls the provider. Holds provider secrets.
+panic-alert
+User JWT
+Writes a critical incident, SMSes the on-call responder, shares last known GPS
+voice-proxy
+Provider signature
+Masked-call routing callback
+PUBLIC ENDPOINTS
+Callback functions are internet-facing and unauthenticated by design. Every one must verify a provider signature or shared secret before touching the
+database, and must be safe to call twice with the same payload. Treat these as the highest-risk surface in the system.
+10.2 Scheduled jobs (pg_cron)
+Job
+Schedule
+Action
+expire_pending
+every minute
+Cancel pending_payment bookings older than 10 minutes
+dispatch_notifications
+every minute
+Send queued WhatsApp/SMS, handle retries
+queue_reminders
+every 15 min
+Enqueue T−24h and T−2h reminders
+reconcile_payments
+every 2 min
+Query provider for unresolved payments
+session_watchdog
+every 5 min
+Flag sessions past expected end with no check-out → ops alert
+credential_expiry
+daily 06:00
+Warn ops 30 days before any therapist credential expires
+build_payouts
+Mondays 02:00
+Generate draft payout rows for the prior week
+session_watchdog is a safety control, not a housekeeping job. A therapist who has not checked out fifteen minutes past the expected end of a home
+visit must produce a phone call from ops within five minutes. Build the alert path and test it.

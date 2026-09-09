@@ -1,0 +1,1 @@
+Revisit only if p95 on the availability RPC exceeds 400 ms.

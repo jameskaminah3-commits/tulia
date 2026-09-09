@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Mombasa Wellness Booking"
+description = "A polished booking and operations workspace for a premium Mombasa massage service, with client browsing, availability-aware booking, therapist dispatch, and safety-conscious booking records."
+version = "1.0.0"
+id = "artifacts/wellness-booking"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18591
+
+[services.development]
+run = "pnpm --filter @workspace/wellness-booking run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/wellness-booking", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/wellness-booking/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18591"
+BASE_PATH = "/"

@@ -1,0 +1,46 @@
+9. WhatsApp, notifications and number masking
+PRIORITY NOTE
+The WhatsApp layer is the highest-value item in the whole build. It is what reduces no-shows and drives rebooking. If schedule pressure forces a cut, cut the
+therapist earnings ledger before you cut reminders.
+9.1 Message catalogue
+Trigger
+Channel
+Content
+Booking confirmed
+WhatsApp
+Reference, treatment, date/time, therapist name, location, price paid, cancellation policy
+T−24 hours
+WhatsApp
+Reminder, with one-tap reschedule and cancel links
+T−2 hours
+WhatsApp
+Final reminder; for home visits, "please confirm the address"
+Therapist en route
+WhatsApp
+Triggered by therapist app; therapist name, photo, ETA
+Session complete
+WhatsApp
+Thank you, rating link, optional tip
+Rebooking nudge
+WhatsApp
+21 days after last completed session
+New job offer
+WhatsApp + push
+To therapist: treatment, time, zone, fee
+Any of the above
+SMS fallback
+Via Africa's Talking if WhatsApp delivery fails or the number is not on WhatsApp
+9.2 Implementation
+WhatsApp Business Cloud API. Pre-approve message templates early — approval takes days and is a common launch blocker.
+Outbound messages go through a notifications queue table, dispatched by pg_cron every minute. Never send inline in a request handler; a
+WhatsApp outage must not fail a booking.
+Store sent_at , delivered_at , failed_at and the provider message id. Retry twice, then fall back to SMS.
+Inbound webhook lands on an Edge Function. At launch, route all inbound messages to the ops console rather than attempting a bot. Conversational
+booking is phase two at the earliest.
+9.3 Number masking
+Required before mobile (home and hotel) service goes live. Client and therapist must be able to call each other about access, parking or delays without
+exchanging real numbers.
+Africa's Talking voice proxy: allocate a pool of virtual numbers; bind a pair to a booking from T−2h to T+2h; route calls through and log them.
+After the window closes, the binding is released and the number returns to the pool.
+Call metadata (who, when, duration) is logged. Content is not recorded.
+This is a genuine commercial control as well as a privacy one: it is the main technical brake on clients and therapists taking the relationship off-platform.

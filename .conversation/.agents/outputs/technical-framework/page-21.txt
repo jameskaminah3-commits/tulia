@@ -1,0 +1,39 @@
+12. Environments, CI/CD and testing
+12.1 Environments
+Environment
+Supabase
+Web
+Payments
+Local
+Supabase CLI, Docker
+next dev
+Provider sandbox
+Staging
+wellness-staging
+Vercel preview
+Provider sandbox
+Production
+wellness-prod
+Vercel production
+Live credentials
+12.2 Practices
+All schema changes as migrations in the repository via the Supabase CLI. No changes through the dashboard on production, ever. A dashboard
+change that is not in a migration will be silently lost on the next deploy and will be very hard to diagnose.
+Trunk-based development, short-lived branches, Vercel preview per pull request.
+Seed script producing realistic data: five therapists, twenty treatments, two rooms, a month of bookings. Everyone develops against the same
+fixtures.
+Error tracking (Sentry) from week one, not after the first incident.
+12.3 Test coverage that actually matters
+Do not chase a coverage percentage. Cover these specific cases, and treat any of them failing as a release blocker:
+1. Two concurrent bookings for the same therapist and slot → exactly one succeeds, the other receives SLOT_TAKEN .
+2. Two concurrent studio bookings for the last free room → same.
+3. Travel outbound: a Nyali booking ending 14:00 must not offer a Shanzu slot at 14:15.
+4. Travel return leg: a slot must not be offered if taking it would make the therapist late for an existing later booking.
+5. Therapist with an expired good-conduct certificate disappears from availability.
+6. All six payment paths in §8.3.
+7. Duplicate payment callback processed twice → one payment row, one confirmation message.
+8. Callback arriving before initiate() returns → handled without error.
+9. Cancellation fees at 13h, 6h and 1h before start → 0%, 50%, 100%.
+10. RLS: a therapist cannot read a booking assigned to another therapist; a client cannot read another client's booking. Test with real JWTs, not the
+service role.
+11. Panic button writes an incident and dispatches an SMS within 10 seconds.

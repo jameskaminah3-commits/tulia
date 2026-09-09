@@ -1,0 +1,23 @@
+7. Booking transaction and double-booking prevention
+7.1 Enforce it in the database
+Two clients can hit "book" on the same slot in the same second. Application-level checking cannot prevent this reliably. Postgres exclusion constraints
+can, and they cost one line each.
+create extension if not exists btree_gist;
+-- A therapist cannot have two overlapping blocked ranges.
+alter table bookings add constraint no_therapist_overlap
+  exclude using gist (
+    therapist_id with =,
+    blocked_range with &&
+  ) where (status in ('confirmed','in_progress'));
+-- A studio room cannot be double-booked.
+alter table bookings add constraint no_room_overlap
+  exclude using gist (
+    room_id with =,
+    blocked_range with &&
+  ) where (status in ('confirmed','in_progress') and room_id is not null);
+WHY THIS MATTERS MORE THAN IT LOOKS
+These two constraints make double booking impossible, regardless of any bug we later introduce in the availability query, the ops console, or a partner
+integration. Treat a constraint violation as an expected outcome and translate it into a friendly "that slot was just taken" message, not a 500.
+7.2 The booking RPC
+Booking is a multi-step operation that must be atomic: re-verify availability, compute price, compute the blocked range, insert. Do it in one security
+definer function so there is no window between check and write.

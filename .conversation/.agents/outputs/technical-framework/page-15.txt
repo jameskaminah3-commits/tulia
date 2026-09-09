@@ -1,0 +1,61 @@
+create or replace function create_booking(
+  p_treatment_id uuid, p_therapist_id uuid, p_start timestamptz,
+  p_mode delivery_mode, p_zone text, p_room_id uuid,
+  p_address text, p_hotel text, p_room_no text
+) returns bookings
+language plpgsql security definer set search_path = public as $$
+declare
+  v_t treatments%rowtype;
+  v_price int;
+  v_travel int := 0;
+  v_booking bookings%rowtype;
+begin
+  if auth.uid() is null then raise exception 'AUTH_REQUIRED'; end if;
+  select * into v_t from treatments where id = p_treatment_id and is_active;
+  if not found then raise exception 'TREATMENT_UNAVAILABLE'; end if;
+  select price_kes into v_price from treatment_pricing
+   where treatment_id = p_treatment_id and mode = p_mode and is_available;
+  if v_price is null then raise exception 'PRICE_UNAVAILABLE'; end if;
+  if p_mode <> 'studio' then
+    select minutes into v_travel from zone_travel_matrix
+     where from_zone = p_zone and to_zone = p_zone;   -- outbound buffer
+  end if;
+  insert into bookings (
+    reference, client_id, therapist_id, treatment_id, mode, status, origin,
+    service_range, blocked_range, room_id, zone_id,
+    address_line, hotel_name, hotel_room_no, price_kes
+  ) values (
+    gen_booking_ref(), auth.uid(), p_therapist_id, p_treatment_id, p_mode,
+    'pending_payment', 'app',
+    tstzrange(p_start, p_start + make_interval(mins => v_t.duration_min), '[)'),
+    tstzrange(p_start, p_start + make_interval(
+        mins => v_t.duration_min + v_t.turnaround_min + v_travel), '[)'),
+    p_room_id, p_zone, p_address, p_hotel, p_room_no, v_price
+  ) returning * into v_booking;
+  return v_booking;
+exception
+  when exclusion_violation then raise exception 'SLOT_TAKEN';
+end; $$;
+7.3 Holding the slot during payment
+A booking is created as pending_payment , which the exclusion constraints deliberately ignore — otherwise abandoned checkouts would lock slots
+indefinitely. Instead:
+The client has 10 minutes to complete payment.
+A pg_cron job every minute expires pending_payment bookings older than 10 minutes to cancelled .
+On successful payment the callback moves the booking to confirmed , at which point the exclusion constraints engage. If two people paid for the
+same slot in that window, the second transition raises exclusion_violation — refund automatically and notify ops. Rare, but it must be handled
+rather than crash.
+7.4 Cancellation policy in code
+-- Hours before service start → fee as % of price
+--   > 12h   : 0%
+--   2h – 12h: 50%
+--   < 2h    : 100%
+--   no-show : 100%
+create or replace function cancellation_fee(p_booking_id uuid)
+returns int language sql stable as $$
+  select case
+    when lower(service_range) - now() > interval '12 hours' then 0
+    when lower(service_range) - now() > interval '2 hours'  then round(price_kes * 0.5)
+    else price_kes
+  end from bookings where id = p_booking_id;
+$$;
+Ops must be able to waive a fee, and every waiver is logged with the staff member's id. Build the audit trail now; it will be asked for.

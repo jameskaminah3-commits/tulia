@@ -1,6 +1,6 @@
-# [Project name]
+# Mombasa Wellness Booking
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Tulia is a booking and operations workspace for a premium massage service serving homes, hotels, and a Nyali studio in Mombasa.
 
 ## Run & Operate
 
@@ -22,23 +22,34 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/wellness-booking/src/` — client booking flow, operations console, and therapist roster.
+- `artifacts/api-server/src/routes/wellness.ts` — availability, booking, therapist, and operations endpoints.
+- `lib/api-spec/openapi.yaml` — source of truth for the typed API contract.
+- `lib/db/src/schema/wellness.ts` — source of truth for the booking domain schema.
+- `artifacts/wellness-booking/src/index.css` — shared visual tokens and responsive theme.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Availability is computed on the server from therapist windows, active bookings, delivery-mode eligibility, gender preference, and a fixed Mombasa zone travel matrix.
+- Booking creation rechecks the selected slot server-side so a stale client cannot create a double booking.
+- Payment and messaging providers stay behind the booking contract for now; booking state starts at `pending_payment` and can be advanced from the operations console.
+- Client, operations, and therapist surfaces share one responsive React artifact so the first release can be deployed and iterated as one product.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Public booking flow for treatment, delivery mode, date, availability-aware time, and client details.
+- Operations console with today's booking summary, status mix, live queue, therapist pulse, and status controls.
+- Therapist roster with readiness status, ratings, specialties, and service zones.
+- Seeded Mombasa treatments, therapists, availability windows, travel times, and example bookings for a useful first preview.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+_No cross-project preferences saved._
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Regenerate API hooks after changing `lib/api-spec/openapi.yaml` with `pnpm --filter @workspace/api-spec run codegen`.
+- Run the API and web managed workflows for preview; application code uses the routed `/api` path, not service ports.
 
 ## Pointers
 

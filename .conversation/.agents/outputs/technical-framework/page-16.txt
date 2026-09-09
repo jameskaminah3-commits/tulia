@@ -1,0 +1,54 @@
+8. Payments
+8.1 Provider abstraction — build this first
+We will change payment provider at least once, most likely from an aggregator to direct Safaricom Daraja once volume justifies the two-to-six week
+onboarding. Write the interface before the first integration.
+interface PaymentProvider {
+  name: 'pesapal' | 'intasend' | 'dpo' | 'daraja';
+  initiate(input: {
+    bookingId: string; amountKes: number; phone?: string;
+    method: 'mpesa' | 'card'; currency: 'KES' | 'USD' | 'EUR' | 'GBP';
+  }): Promise<{ providerRef: string; redirectUrl?: string }>;
+  verifySignature(headers: Headers, rawBody: string): boolean;
+  parseCallback(rawBody: string): { providerRef: string; status: PaymentStatus;
+                                    receipt?: string; amountKes?: number };
+  queryStatus(providerRef: string): Promise<PaymentStatus>;   // reconciliation
+  refund(paymentId: string, amountKes: number): Promise<void>;
+  payout?(input: { phone: string; amountKes: number; ref: string }): Promise<void>;
+}
+Launch with Pesapal or IntaSend for M-Pesa (fastest to live, they handle token refresh, callbacks and reconciliation) and DPO Pay for cards and multi-
+currency, which matters for the hotel and tourist channel. Migrate M-Pesa to direct Daraja later for the lower per-transaction cost.
+8.2 STK Push flow
+ Client                Next.js              Edge Function        Provider        Client phone
+   │  tap Pay             │                       │                   │                │
+   ├─────────────────────▶│                       │                   │                │
+   │                      │ insert payment        │                   │                │
+   │                      │ (status = pending)    │                   │                │
+   │                      ├──────────────────────────────────────────▶│                │
+   │                      │      initiate()  → providerRef            │                │
+   │                      │◀──────────────────────────────────────────┤                │
+   │◀─────────────────────┤ show "check your phone"                   │                │
+   │                      │                       │                   ├───────────────▶│
+   │                      │                       │                   │   PIN prompt   │
+   │                      │                       │◀──────────────────┤                │
+   │                      │                       │   callback POST   │                │
+   │                      │                       ├── verify sig      │                │
+   │                      │                       ├── upsert payment  │                │
+   │                      │                       ├── confirm booking │                │
+   │                      │                       └── queue WhatsApp  │                │
+   │◀─── realtime / poll ─┤                       │                   │                │
+8.3 The six failure paths — all must be tested
+Scenario
+Required behaviour
+STK success
+Booking → confirmed , WhatsApp confirmation sent, therapist notified
+Client cancels the prompt
+Payment → failed , booking stays pending_payment , client offered retry
+STK timeout
+Payment → timed_out . Money may still have moved. Never auto-cancel on timeout alone — the reconciliation
+sweep must confirm with the provider before we release the slot.
+Card success
+Same as STK success; store currency and FX rate applied
+Card declined
+Payment → failed , clear message, retry with a different method offered
+Refund
+Payment → refunded , booking → cancelled , audit row written

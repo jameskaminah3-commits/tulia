@@ -1,0 +1,55 @@
+-- Illustrative. Ops to tune these from real observed journeys after month one.
+-- Values are one-way minutes, deliberately generous.
+insert into zone_travel_matrix (from_zone, to_zone, minutes) values
+ ('island','island',15),  ('island','nyali',25),  ('island','bamburi',40),
+ ('island','shanzu',50),  ('island','mtwapa',60),
+ ('nyali','nyali',15),    ('nyali','bamburi',20), ('nyali','shanzu',30),
+ ('nyali','mtwapa',40),
+ ('bamburi','bamburi',15),('bamburi','shanzu',15),('bamburi','mtwapa',25),
+ ('shanzu','shanzu',15),  ('shanzu','mtwapa',15),
+ ('mtwapa','mtwapa',15);
+-- plus the symmetric inverse rows
+RECOMMENDATION
+Do not call the Google Distance Matrix API for availability queries. Availability is queried far more often than it is booked — every date the client browses fires a
+query — and per-request billing on a read-heavy path will be both slow and expensive. Revisit only if we expand beyond the coastal corridor.
+6.4 Algorithm
+function availableSlots(treatment, date, mode, zone, genderPref):
+  therapists ← eligible_therapists(treatment, mode, genderPref)
+  slotSize   ← 15 minutes
+  results    ← []
+  for each therapist T in therapists:
+      working  ← union of T's non-blocked availability_windows on date
+      busy     ← T's bookings on date, status in (confirmed, in_progress)
+      for each candidate start S in working, stepping by slotSize:
+          serviceEnd ← S + treatment.duration_min
+          if serviceEnd not within working: continue
+          -- Outbound leg: can T reach this job from the previous one?
+          prev ← latest booking in busy ending at or before S
+          if prev exists:
+              travel ← travelMinutes(prev.zone, zone)
+              if S < prev.service_end + prev.turnaround + travel: continue
+          else:
+              travel ← travelMinutes(T.home_zone, zone)
+              if S < startOfWindow + travel: continue
+          -- Return leg: can T reach the NEXT job after finishing this one?
+          next ← earliest booking in busy starting at or after serviceEnd
+          if next exists:
+              back ← travelMinutes(zone, next.zone)
+              if serviceEnd + treatment.turnaround + back > next.service_start:
+                  continue
+          -- Studio only: is a room free for the whole blocked range?
+          if mode = 'studio':
+              if no room free over [S, serviceEnd + turnaround]: continue
+          results.append({ therapist: T, start: S, room: assignedRoom })
+  return results grouped by start time
+THE RETURN LEG IS THE STEP PEOPLE FORGET
+Checking only that the therapist can arrive produces schedules where they cannot reach their next appointment. Both legs must be checked. Write a test for
+exactly this case.
+6.5 Performance
+With under ten therapists and a two-week booking horizon this runs comfortably in Postgres as a single stable SQL function called via RPC. Do not build a
+caching layer or a materialised availability table yet. Index for it:
+create index bookings_therapist_range_idx on bookings
+  using gist (therapist_id, blocked_range)
+  where status in ('confirmed','in_progress');
+create index availability_therapist_window_idx on availability_windows
+  using gist (therapist_id, window);

@@ -1,0 +1,34 @@
+4. Data model and schema
+4.1 Entity overview
+profiles ──┬── clients ──────< bookings >────── therapists ──┬── therapist_credentials
+           │       │              │                          ├── therapist_skills
+           │       │              ├── payments               ├── availability_windows
+           │       │              ├── session_logs           └── payouts
+           │       │              ├── ratings
+           │       │              └── incidents
+           │       └── client_verifications
+           └── ops staff
+treatments ──< treatment_pricing (by delivery mode)
+rooms (studio treatment rooms)
+zones ──< zone_travel_matrix
+partners (hotels, corporates) ──< bookings
+4.2 Core enums and reference tables
+create type user_role      as enum ('client','therapist','ops','admin');
+create type delivery_mode  as enum ('studio','home','hotel');
+create type booking_status as enum ('pending_payment','confirmed','in_progress',
+                                    'completed','cancelled','no_show');
+create type booking_origin as enum ('app','hotel_partner','walk_in','phone','corporate');
+create type payment_status as enum ('pending','succeeded','failed','refunded','timed_out');
+-- Travel zones. Deliberately coarse; see section 6.3.
+create table zones (
+  id    text primary key,          -- 'island','nyali','bamburi','shanzu','mtwapa'
+  name  text not null,
+  is_serviceable boolean not null default true
+);
+create table zone_travel_matrix (
+  from_zone text references zones(id),
+  to_zone   text references zones(id),
+  minutes   int not null check (minutes >= 0),
+  primary key (from_zone, to_zone)
+);
+4.3 People

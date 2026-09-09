@@ -1,0 +1,29 @@
+Contents
+1
+What we are building, and the one hard part
+2
+System architecture
+3
+Hosting decision: Supabase, Vercel, Railway — and why not cPanel
+4
+Data model and schema
+5
+Row Level Security model
+6
+The availability & scheduling engine
+7
+Booking transaction and double-booking prevention
+8
+Payments: M-Pesa STK Push, cards, payouts
+9
+WhatsApp, notifications and number masking
+10
+Edge Functions and background jobs
+11
+Security, privacy and Kenyan data-protection obligations
+12
+Environments, CI/CD and testing
+13
+12-week delivery plan
+14
+Definition of done

@@ -1,0 +1,36 @@
+11. Security, privacy and Kenyan obligations
+11.1 What we hold
+Names, phone numbers, home addresses, ID or passport numbers, payment references, appointment histories and therapist health notes. Under Kenyan
+law that is a serious data set, and appointment history combined with home address is materially sensitive.
+11.2 Compliance requirements
+Obligation
+What engineering must deliver
+ODPC registration
+Business action, but engineering supplies the processing description. Required where turnover exceeds
+KES 5M, staff exceed 10, sensitive data is processed, or data of 10,000+ subjects is handled in a year.
+Data Protection Impact Assessment
+Must be completed before processing begins. Engineering documents data flows, retention and third-
+party processors.
+Breach notification
+72 hours to the ODPC. We need audit logging good enough to establish scope quickly, and a documented
+escalation path.
+Consent
+Freely given, specific, informed, unambiguous. Separate, unticked checkboxes for terms, marketing and
+health-note storage. No pre-ticked boxes, no bundling.
+Data subject rights
+Export and deletion endpoints in the ops console. Deletion anonymises rather than drops booking rows,
+so financial records survive.
+11.3 Engineering controls
+RLS on every table, verified by an automated test that fails CI if any public table has RLS disabled.
+Service role key server-side only. Add a CI grep that fails the build if it appears in any client bundle.
+Encrypt ID document numbers at the column level using pgcrypto , with the key in Supabase Vault. Never log them.
+Private storage bucket for credential scans, accessed only through short-lived signed URLs generated server-side for ops.
+Audit log table capturing every staff read of client PII, every fee waiver, every ban and every payout approval, with actor and timestamp.
+Retention: GPS check-in/out points purged after 90 days; masked-call metadata after 90 days; booking and payment records retained seven years for
+tax.
+Secrets in Vercel and Supabase environment configuration only. Never in the repository, never in the client bundle.
+Rate limiting on OTP requests and the availability RPC.
+THERAPIST SAFETY DATA
+Panic-button events, GPS traces and incident records exist to protect people. Access is ops-and-admin only, every access is logged, and this data is never used
+for performance management. Make that explicit in the therapist-facing privacy notice — if therapists suspect the panic button is surveillance, they will not use
+it, and the safety architecture fails.

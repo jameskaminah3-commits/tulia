@@ -1,0 +1,33 @@
+1. What we are building, and the one hard part
+A booking, payment and dispatch platform for a premium massage service operating from a studio in Mombasa and delivering to client
+homes and hotel rooms. Three user types, one database, one deployment.
+1.1 The three surfaces
+Surface
+Users
+What it does
+Client web app
+Public, PWA
+Residents & tourists
+Browse treatments, check availability, pick therapist, book, pay, receive confirmations, rate,
+rebook
+Therapist app
+Auth, mobile web
+4–10 therapists
+Set availability, accept jobs, navigate, check in/out with GPS, panic button, view earnings
+Ops console
+Auth, desktop web
+1–2 ops staff
+Live board, manual assignment, exception handling, incident log, payout runs, client and
+therapist records
+1.2 The hard part
+Ninety percent of this system is ordinary CRUD. One part is not: computing which therapists are genuinely available for a given treatment, time and
+location, given that they move between the studio, client homes across Mombasa, and hotels along the North Coast.
+A therapist finishing a session in Nyali at 14:00 cannot begin one in Shanzu at 14:15. A therapist being free does not help if both studio rooms are
+occupied. Not every therapist is trained in prenatal or deep tissue. The client may have requested a specific therapist gender.
+WHERE PROJECTS LIKE THIS FAIL
+Double bookings and impossible travel schedules. Both destroy trust with the client and the therapist, and both are avoidable at the database layer rather than
+in application code. Section 6 and 7 specify how. Please read those two sections before writing any booking logic.
+1.3 Non-goals for version one
+Explicitly out of scope, do not build: native iOS/Android apps, therapist self-onboarding, memberships and gift vouchers, a corporate portal, loyalty
+points, multi-language, automated payout execution, review syndication to Google, or any form of surge/dynamic pricing. All are phase two. Scope creep
+here will cost us the launch window.

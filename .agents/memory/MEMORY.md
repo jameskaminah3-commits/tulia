@@ -1,0 +1,1 @@
+- [Seed identity and foreign keys](seed-identity-and-foreign-keys.md) — preserve explicit IDs across related demo fixtures; create schemas may intentionally omit primary keys.

@@ -1,0 +1,34 @@
+3. Hosting decision
+The brief mentioned cPanel or Railway. Here is a direct recommendation, because this choice is expensive to reverse.
+Recommended
+Layer
+Choice
+Reasoning
+Database, auth, storage,
+functions
+Supabase
+Already chosen, and correct. Managed Postgres with RLS, auth and edge functions in one
+place removes most of our infrastructure work.
+Web application
+Vercel
+Next.js is a Vercel product. Zero-config deploys, preview URLs per pull request, edge
+caching, automatic HTTPS. Free tier covers us until real traffic.
+Background workers (only if
+needed)
+Railway
+Good fit for long-running jobs if we outgrow pg_cron and Edge Functions — for example a
+payout batch runner. Not needed at launch.
+Marketing site / domain email
+cPanel (if we already pay for it)
+Fine for a static brochure page and mailboxes. Point the app at a subdomain.
+DO NOT HOST THE APPLICATION ON CPANEL
+cPanel is built for PHP on shared Apache hosting. Running Next.js on it means Passenger or a hand-managed Node process, and in practice that gives us: no
+zero-downtime deploys, no preview environments, fragile process restarts after any panel update, awkward environment-variable handling, cron limited to
+minute granularity with no observability, and no straightforward rollback. Every hour saved by reusing existing hosting will be repaid several times over in
+deployment incidents. If there is an existing cPanel contract, use it for the marketing page and email only.
+3.1 Supabase project setup
+Region: eu-central-1 (Frankfurt) or ap-south-1 (Mumbai). Mumbai typically gives lower latency to Kenya; test both with a ping before committing,
+since we cannot change region later without a migration.
+Two projects: wellness-staging and wellness-prod . Never develop against production.
+Enable Point-in-Time Recovery on production before launch day. This is a paid add-on and it is not optional — we hold booking and payment records.
+Enable pg_cron , pgcrypto , btree_gist and postgis (postgis only if we later need real geo queries; the zone table in §6 avoids it for now).

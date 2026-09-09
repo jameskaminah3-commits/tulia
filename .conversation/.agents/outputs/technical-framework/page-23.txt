@@ -1,0 +1,18 @@
+14. Definition of done
+A feature ships when all of the following are true. No exceptions for launch pressure.
+Schema changes are migrations in the repository, applied to staging first.
+RLS policies exist and are covered by a test using a real user JWT.
+Errors surface as user-readable messages, never as a raw Postgres error string.
+Every write path populates bookings.origin and, for new clients, clients.acquired_via .
+Anything touching money is idempotent and has a reconciliation path.
+Anything touching client PII is logged in the audit table.
+The flow has been walked through on a real mid-range Android phone on a mobile connection — not only on a laptop. Most of our clients and all of
+our therapists will be on exactly that.
+Ops can perform the equivalent action manually in the console when the automated path fails.
+Open questions for the team
+1. Confirm the Supabase region after latency testing from Mombasa: Frankfurt or Mumbai.
+2. Confirm the payment aggregator: Pesapal or IntaSend for M-Pesa. Whichever onboards us faster.
+3. Decide whether therapists accept or are assigned jobs. The spec assumes client picks from available therapists, which supports the trust positioning
+but means we must handle a therapist declining after selection.
+4. Confirm the studio room count so the room-conflict logic is correct from day one.
+5. Agree the initial zone travel matrix values with ops, and schedule a review after one month of real journeys.
