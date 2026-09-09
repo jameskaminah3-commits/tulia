@@ -1,4 +1,11 @@
-import { Router, type IRouter, type Request } from "express";
+import { randomBytes, timingSafeEqual } from "node:crypto";
+import {
+  Router,
+  type IRouter,
+  type NextFunction,
+  type Request,
+  type Response,
+} from "express";
 import {
   and,
   asc,
@@ -6,7 +13,9 @@ import {
   eq,
   gte,
   inArray,
+  lt,
   lte,
+  sql,
 } from "drizzle-orm";
 import {
   db,
@@ -35,6 +44,7 @@ import {
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
+const PENDING_PAYMENT_HOLD_MS = 10 * 60 * 1000;
 
 type DeliveryMode = "studio" | "home" | "hotel";
 type BookingStatus =
@@ -193,6 +203,31 @@ function travelMinutes(fromZone: string, toZone: string) {
   return TRAVEL_MINUTES[`${fromZone}:${toZone}`] ?? 30;
 }
 
+function bookingZone(booking: typeof bookingsTable.$inferSelect) {
+  return booking.mode === "studio" ? "nyali" : booking.zone ?? "nyali";
+}
+
+function requireOpsApiKey(req: Request, res: Response, next: NextFunction) {
+  const configuredKey = process.env.OPS_API_KEY;
+  if (!configuredKey) {
+    logger.error("OPS_API_KEY is not configured; refusing an operations request");
+    res.status(503).json({ error: "Operations access is not configured." });
+    return;
+  }
+
+  const token = req.get("authorization")?.replace(/^Bearer\s+/i, "");
+  const received = Buffer.from(token ?? "");
+  const expected = Buffer.from(configuredKey);
+  if (
+    received.length !== expected.length ||
+    !timingSafeEqual(received, expected)
+  ) {
+    res.status(401).json({ error: "Operations authentication is required." });
+    return;
+  }
+  next();
+}
+
 function locationLabel(mode: DeliveryMode, zone?: string | null) {
   if (mode === "studio") return "Mombasa studio · Nyali";
   if (mode === "hotel") return `${zone ?? "Mombasa"} hotel room`;
@@ -208,6 +243,18 @@ function isModeEligible(therapist: typeof SEED_THERAPISTS[number], mode: Deliver
 }
 
 async function ensureSeedData() {
+  await db
+    .update(bookingsTable)
+    .set({ status: "cancelled" })
+    .where(
+      and(
+        eq(bookingsTable.status, "pending_payment"),
+        lt(
+          bookingsTable.createdAt,
+          new Date(Date.now() - PENDING_PAYMENT_HOLD_MS),
+        ),
+      ),
+    );
   await db
     .insert(treatmentsTable)
     .values(
@@ -430,7 +477,7 @@ async function findAvailableSlots(
       ) {
         const start = dateAtMinutes(day, startMin);
         const end = new Date(start.getTime() + treatment.durationMin * 60 * 1000);
-        const requestedZone = mode === "studio" ? "island" : zone ?? "nyali";
+        const requestedZone = mode === "studio" ? "nyali" : zone ?? "nyali";
         const overlapping = therapistBookings.some(
           (booking) =>
             booking.blockedStart < end && booking.blockedEnd > start,
@@ -443,12 +490,28 @@ async function findAvailableSlots(
             (left, right) =>
               right.serviceEnd.getTime() - left.serviceEnd.getTime(),
           )[0];
-        const originZone = previousBooking?.zone ?? therapist.homeZone;
+        const originZone = previousBooking
+          ? bookingZone(previousBooking)
+          : therapist.homeZone;
         const travel = travelMinutes(originZone, requestedZone);
+        const earliestDeparture = previousBooking
+          ? previousBooking.serviceEnd
+          : dateAtMinutes(day, window.startMin);
+        const turnaround = previousBooking ? 15 : 0;
+        if (minutesBetween(earliestDeparture, start) < travel + turnaround) {
+          continue;
+        }
+
+        const nextBooking = therapistBookings
+          .filter((booking) => booking.serviceStart >= end)
+          .sort(
+            (left, right) =>
+              left.serviceStart.getTime() - right.serviceStart.getTime(),
+          )[0];
         if (
-          previousBooking &&
-          minutesBetween(previousBooking.serviceEnd, start) <
-            travel + 15
+          nextBooking &&
+          minutesBetween(end, nextBooking.serviceStart) <
+            travelMinutes(requestedZone, bookingZone(nextBooking)) + 15
         ) {
           continue;
         }
@@ -555,7 +618,7 @@ router.get("/availability", async (req, res, next) => {
   }
 });
 
-router.get("/bookings", async (req, res, next) => {
+router.get("/bookings", requireOpsApiKey, async (req, res, next) => {
   try {
     await ensureSeedData();
     const query = ListBookingsQueryParams.parse(req.query);
@@ -577,48 +640,63 @@ router.post("/bookings", async (req, res, next) => {
   try {
     await ensureSeedData();
     const body = parseBookingRequest(req);
+    if (body.mode === "home" && (!body.zone || !body.addressLine)) {
+      res.status(400).json({ error: "A zone and address are required for a home visit." });
+      return;
+    }
+    if (body.mode === "hotel" && (!body.zone || !body.hotelName)) {
+      res.status(400).json({ error: "A zone and hotel name are required for a hotel visit." });
+      return;
+    }
     const day = dateKey(body.date);
-    const available = await findAvailableSlots(
-      day,
-      body.treatmentId,
-      body.mode,
-      body.zone,
-      null,
-    );
-    const selected = available.slots.find(
-      (slot) =>
-        slot.therapistId === body.therapistId &&
-        slot.start.getTime() === body.start.getTime(),
-    );
-    if (!selected || !available.treatment) {
+    const reference = `MW-${randomBytes(4).toString("hex").toUpperCase()}`;
+    const didCreate = await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`${body.therapistId}:${day}`}))`,
+      );
+      const available = await findAvailableSlots(
+        day,
+        body.treatmentId,
+        body.mode,
+        body.zone,
+        null,
+      );
+      const selected = available.slots.find(
+        (slot) =>
+          slot.therapistId === body.therapistId &&
+          slot.start.getTime() === body.start.getTime(),
+      );
+      if (!selected || !available.treatment) return false;
+
+      await tx.insert(bookingsTable).values(
+        insertBookingSchema.parse({
+          reference,
+          treatmentId: body.treatmentId,
+          therapistId: body.therapistId,
+          clientName: body.clientName,
+          clientPhone: body.clientPhone,
+          mode: body.mode,
+          scheduledDate: day,
+          serviceStart: selected.start,
+          serviceEnd: selected.end,
+          blockedStart: selected.start,
+          blockedEnd: new Date(selected.end.getTime() + 15 * 60 * 1000),
+          zone: body.zone ?? null,
+          addressLine: body.addressLine ?? null,
+          hotelName: body.hotelName ?? null,
+          hotelRoomNo: body.hotelRoomNo ?? null,
+          notes: body.notes ?? null,
+          priceKes: available.treatment.priceKes,
+          status: "pending_payment",
+          origin: "client_web",
+        }),
+      );
+      return true;
+    });
+    if (!didCreate) {
       res.status(409).json({ error: "That time has just been taken. Please choose another slot." });
       return;
     }
-
-    const reference = `MW-${Math.floor(1000 + Math.random() * 9000)}`;
-    await db.insert(bookingsTable).values(
-      insertBookingSchema.parse({
-        reference,
-        treatmentId: body.treatmentId,
-        therapistId: body.therapistId,
-        clientName: body.clientName,
-        clientPhone: body.clientPhone,
-        mode: body.mode,
-        scheduledDate: day,
-        serviceStart: selected.start,
-        serviceEnd: selected.end,
-        blockedStart: selected.start,
-        blockedEnd: new Date(selected.end.getTime() + 15 * 60 * 1000),
-        zone: body.zone ?? null,
-        addressLine: body.addressLine ?? null,
-        hotelName: body.hotelName ?? null,
-        hotelRoomNo: body.hotelRoomNo ?? null,
-        notes: body.notes ?? null,
-        priceKes: available.treatment.priceKes,
-        status: "pending_payment",
-        origin: "client_web",
-      }),
-    );
 
     const rows = await listBookingRows();
     const created = rows.find((row) => row.booking.reference === reference);
@@ -629,7 +707,7 @@ router.post("/bookings", async (req, res, next) => {
   }
 });
 
-router.patch("/bookings/:id/status", async (req, res, next) => {
+router.patch("/bookings/:id/status", requireOpsApiKey, async (req, res, next) => {
   try {
     await ensureSeedData();
     const params = UpdateBookingStatusParams.parse(req.params);
@@ -656,7 +734,7 @@ router.patch("/bookings/:id/status", async (req, res, next) => {
   }
 });
 
-router.get("/operations/summary", async (_req, res, next) => {
+router.get("/operations/summary", requireOpsApiKey, async (_req, res, next) => {
   try {
     await ensureSeedData();
     const rows = await listBookingRows();
