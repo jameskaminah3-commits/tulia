@@ -8,7 +8,7 @@ export default async function HomePage() {
   const catalog = await getCatalog();
   const therapistCount = catalog.therapists.length;
   return <main className="tulia-site">
-    <header className="tulia-header"><Link href="/" className="tulia-brand"><span className="brand-mark">≈</span><span><b>Tulia</b><small>Mombasa wellness</small></span></Link><div><a className="nav-link" href="#collective">Meet the collective</a><span className="open-daily">Mombasa · open daily</span><a href="tel:+254700000000">Call Tulia</a><a className="dispatch-link" href="#collective">For therapists</a></div></header>
+    <header className="tulia-header"><Link href="/" className="tulia-brand"><span className="brand-mark">≈</span><span><b>Tulia</b><small>Mombasa wellness</small></span></Link><div><Link className="nav-link" href="/therapists">Meet the collective</Link><span className="open-daily">Mombasa · open daily</span><a href="tel:+254700000000">Call Tulia</a><Link className="dispatch-link" href="/login">Sign in</Link></div></header>
     <section className="tulia-hero">
       <div className="hero-copy"><p className="coastal-label"><i /> Mombasa&apos;s considered wellness collective</p><h1>Make room<br />for <em>feeling</em><br />better.</h1><p>Exceptional bodywork, tailored to the rhythm of the coast. Discover a trusted therapist, choose your setting, and hold a time that stays yours.</p><div className="trust-row"><span>⌁ Vetted local therapists</span><span>☀ Studio, home or hotel</span><span>◌ Calm, secure booking</span></div><div className="hero-tiles"><div><b>01</b><small>carefully curated collective</small></div><div className="coast-tile"><i /><i /><small>Tulia / Mombasa</small></div></div></div>
       <TuliaBookingCard {...catalog} />
