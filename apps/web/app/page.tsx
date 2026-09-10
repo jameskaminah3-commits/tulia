@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const catalog = await getCatalog();
   return <main className="tulia-site">
-    <header className="tulia-header"><Link href="/" className="tulia-brand"><span className="brand-mark">≈</span><span><b>Tulia</b><small>Mombasa wellness</small></span></Link><div><span className="open-daily">Mombasa · open daily</span><a href="tel:+254700000000">Call Tulia</a><Link className="dispatch-link" href="/ops">Dispatch login</Link></div></header>
+    <header className="tulia-header"><Link href="/" className="tulia-brand"><span className="brand-mark">≈</span><span><b>Tulia</b><small>Mombasa wellness</small></span></Link><div><span className="open-daily">Mombasa · open daily</span><a href="tel:+254700000000">Call Tulia</a><a className="dispatch-link" href="/ops">Dispatch login</a></div></header>
     <section className="tulia-hero">
       <div className="hero-copy"><p className="coastal-label"><i /> Coastal care, carefully arranged</p><h1>Make room<br />for <em>feeling</em><br />better.</h1><p>Thoughtful massage and bodywork, brought to the pace of the coast. Choose your treatment, your place, and a time that stays yours.</p><div className="trust-row"><span>⌁ Trusted local therapists</span><span>☀ Studio or doorstep</span></div><div className="hero-tiles"><div><b>07</b><small>years of care across the coast</small></div><div className="coast-tile"><i /><i /><small>Tulia / 001</small></div></div></div>
       <TuliaBookingCard {...catalog} />
