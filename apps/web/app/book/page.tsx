@@ -1,19 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BookingForm } from "../../components/booking-form";
-import { createClient, hasSupabaseConfig } from "../../lib/supabase/server";
+import { TuliaBookingCard } from "../../components/tulia-booking-card";
+import { getCatalog } from "../../lib/catalog";
 
 export const metadata: Metadata = { title: "Book a massage", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
 export default async function BookingPage() {
-  if (!hasSupabaseConfig()) {
-    return <main className="booking-page"><div className="booking-intro"><p className="eyebrow">Booking setup</p><h1>Connect the live schedule.</h1><p>This local preview is ready for Supabase. Add the Project URL and publishable key to <code>apps/web/.env.local</code>, then restart the dev server.</p><Link href="/" className="button secondary">Back to treatments</Link></div><section className="booking-form"><p className="eyebrow">Required before bookings</p><h2>Supabase is not connected</h2><p>Live availability, phone verification, payment holds, and database-backed booking are intentionally unavailable until the project credentials are configured.</p></section></main>;
-  }
-  const supabase = await createClient();
-  const [{ data: treatments }, { data: zones }] = await Promise.all([
-    supabase.from("treatments").select("id, slug, name, duration_min").eq("is_active", true).order("sort_order"),
-    supabase.from("zones").select("id, name").eq("is_serviceable", true).order("name"),
-  ]);
-  return <main className="booking-page"><div className="booking-intro"><p className="eyebrow">Secure booking</p><h1>Find a time that works.</h1><p>Availability considers therapist skills, travel, working time and studio rooms before offering a session.</p></div><BookingForm treatments={treatments ?? []} zones={zones ?? []} /></main>;
+  const catalog = await getCatalog();
+  return <main className="tulia-site booking-only"><header className="tulia-header"><Link href="/" className="tulia-brand"><span className="brand-mark">≈</span><span><b>Tulia</b><small>Mombasa wellness</small></span></Link><Link className="dispatch-link" href="/">Back to home</Link></header><section className="booking-focus"><div><p className="coastal-label"><i /> Coastal care, carefully arranged</p><h1>Make room for feeling better.</h1><p>Choose a treatment, a place, and a time that stays yours.</p></div><TuliaBookingCard {...catalog} /></section></main>;
 }
