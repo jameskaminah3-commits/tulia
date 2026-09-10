@@ -109,10 +109,10 @@ create table public.rooms (
 create table public.availability_windows (
   id uuid primary key default gen_random_uuid(),
   therapist_id uuid not null references public.therapists(id) on delete cascade,
-  window tstzrange not null check (not isempty(window)),
+  time_window tstzrange not null check (not isempty(time_window)),
   is_blocked boolean not null default false,
   note text,
-  constraint no_overlapping_work_windows exclude using gist (therapist_id with =, window with &&)
+  constraint no_overlapping_work_windows exclude using gist (therapist_id with =, time_window with &&)
     where (not is_blocked)
 );
 
@@ -325,14 +325,14 @@ language sql stable security definer set search_path = public as $$
     join public.availability_windows aw on aw.therapist_id = t.id and not aw.is_blocked
     cross join treatment tr
     cross join lateral generate_series(
-      greatest(lower(aw.window), p_date::timestamp at time zone 'Africa/Nairobi'),
-      least(upper(aw.window), (p_date + 1)::timestamp at time zone 'Africa/Nairobi') - make_interval(mins => tr.duration_min),
+      greatest(lower(aw.time_window), p_date::timestamp at time zone 'Africa/Nairobi'),
+      least(upper(aw.time_window), (p_date + 1)::timestamp at time zone 'Africa/Nairobi') - make_interval(mins => tr.duration_min),
       interval '15 minutes'
     ) gs
     where not exists (
       select 1 from public.availability_windows blocked
       where blocked.therapist_id = t.id and blocked.is_blocked
-        and blocked.window && tstzrange(gs, gs + make_interval(mins => tr.duration_min), '[)')
+        and blocked.time_window && tstzrange(gs, gs + make_interval(mins => tr.duration_min), '[)')
     )
   )
   select c.start_at, c.end_at, c.therapist_id,
