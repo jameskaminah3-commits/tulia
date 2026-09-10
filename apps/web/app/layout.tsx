@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./styles.css";
+import "./premium.css";
 
 export const metadata: Metadata = {
   title: { default: "Tulia Wellness | Mombasa Massage", template: "%s | Tulia Wellness" },

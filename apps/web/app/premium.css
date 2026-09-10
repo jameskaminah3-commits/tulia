@@ -1,0 +1,37 @@
+.nav-link { color: var(--muted) !important; font-weight: 600; }
+.nav-link:hover { color: var(--ink) !important; }
+
+.tulia-site { position: relative; }
+.tulia-site::after { content: ""; position: fixed; inset: 0; z-index: 10; pointer-events: none; opacity: .035; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"); }
+.tulia-hero { min-height: 690px; }
+.tulia-hero::after { content: "TULIA"; position: absolute; z-index: 0; right: 38%; bottom: 25px; color: rgba(23,65,64,.035); font: 700 clamp(100px, 15vw, 240px)/.8 Fraunces, Georgia, serif; letter-spacing: -.12em; pointer-events: none; }
+.hero-copy { z-index: 1; }
+.tulia-booking-card { overflow: hidden; }
+.tulia-booking-card::before { content: ""; position: absolute; top: -130px; right: -120px; width: 250px; height: 250px; border: 1px solid rgba(105,204,180,.35); border-radius: 50%; pointer-events: none; }
+.tulia-booking-card::after { content: ""; position: absolute; top: -70px; right: -60px; width: 150px; height: 150px; border-radius: 50%; background: rgba(105,204,180,.11); pointer-events: none; }
+.card-heading,.progress,.booking-alert,.booking-step,.tulia-success>* { position: relative; z-index: 1; }
+.primary-action { box-shadow: 0 10px 22px rgba(17,54,51,.18); }
+.primary-action:hover:not(:disabled) { background: #0c302d; box-shadow: 0 14px 30px rgba(17,54,51,.25); }
+.treatment,.mode-option,.slot { position: relative; overflow: hidden; }
+.treatment::after,.mode-option::after,.slot::after { content: ""; position: absolute; inset: auto -10% -70px auto; width: 100px; height: 100px; border-radius: 50%; background: rgba(105,204,180,.08); transition: transform .3s ease; }
+.treatment:hover::after,.mode-option:hover::after,.slot:hover::after { transform: translate(-18px,-18px); }
+
+.collective { max-width: 1320px; margin: auto; padding: 115px 40px 106px; }
+.collective-heading { display: grid; grid-template-columns: 1fr .82fr; gap: 80px; align-items: end; }
+.collective-heading h2 { max-width: 660px; margin: 13px 0 0; font: 600 clamp(42px, 4.7vw, 68px)/1 Fraunces, Georgia, serif; letter-spacing: -.058em; }
+.collective-heading > p { margin: 0; max-width: 470px; color: var(--muted); font-size: 15px; line-height: 1.8; }
+.therapist-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 54px; }
+.therapist-card { overflow: hidden; border: 1px solid rgba(223,216,201,.9); border-radius: 20px; background: var(--card); box-shadow: 0 12px 35px rgba(23,65,64,.035); transition: transform .25s ease, box-shadow .25s ease; }
+.therapist-card:hover { transform: translateY(-7px); box-shadow: 0 22px 45px rgba(23,65,64,.11); }
+.therapist-portrait { position: relative; display: grid; height: 230px; place-items: center; overflow: hidden; background: linear-gradient(135deg,#17514e,#63ad9e); }
+.therapist-portrait::before { content: ""; position: absolute; width: 250px; height: 250px; border: 28px solid rgba(255,255,255,.15); border-radius: 50%; transform: translate(-45px,72px); }
+.therapist-portrait::after { content: ""; position: absolute; right: -25px; top: -15px; width: 150px; height: 150px; border-radius: 50%; background: rgba(236,150,126,.72); }
+.therapist-portrait.portrait-1 { background: linear-gradient(135deg,#bd7e68,#e9bb9d); }.therapist-portrait.portrait-1::after { background: rgba(23,65,64,.34); }.therapist-portrait.portrait-2 { background: linear-gradient(135deg,#485e7a,#9ab5bd); }.therapist-portrait.portrait-2::after { background: rgba(231,195,96,.7); }
+.therapist-portrait span { position: relative; z-index: 1; display: grid; width: 105px; height: 105px; place-items: center; border: 1px solid rgba(255,255,255,.32); border-radius: 50%; background: rgba(255,255,255,.14); color: white; font: 600 38px Fraunces, Georgia, serif; letter-spacing: -.07em; backdrop-filter: blur(8px); }
+.therapist-portrait i { position: absolute; z-index: 1; bottom: 18px; left: 20px; width: 55px; height: 4px; border-radius: 4px; background: var(--mint); }
+.therapist-info { padding: 22px 22px 24px; }.therapist-info>p { margin: 0; color: #398a79; font-size: 10px; font-weight: 700; letter-spacing: .17em; text-transform: uppercase; }.therapist-info h3 { margin: 9px 0 5px; font: 600 27px/1 Fraunces, Georgia, serif; letter-spacing: -.045em; }.therapist-services { display: block; color: #806529; font-size: 11px; font-weight: 700; }.therapist-info small { display: block; min-height: 58px; margin-top: 17px; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.collective-placeholder { display: grid; grid-template-columns: 1.3fr .7fr; gap: 56px; align-items: center; min-height: 340px; margin-top: 50px; padding: 42px; border: 1px solid #285b55; border-radius: 24px; background: radial-gradient(circle at 90% 0,rgba(105,204,180,.22),transparent 30%),var(--ink); color: white; }.collective-placeholder>div>span { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 12px; background: var(--mint); color: var(--ink); font-size: 24px; }.collective-placeholder .coastal-label { margin-top: 20px; color: var(--mint); }.collective-placeholder h3 { max-width: 500px; margin: 10px 0 0; font: 500 clamp(31px,3vw,48px)/1 Fraunces, Georgia, serif; letter-spacing: -.05em; }.collective-placeholder p:last-child { max-width: 510px; margin: 16px 0 0; color: #d1e1dd; font-size: 14px; line-height: 1.75; }.collective-benefits { display: grid; gap: 10px; }.collective-benefits span { border: 1px solid rgba(255,255,255,.15); border-radius: 999px; padding: 10px 13px; color: #d9ebe6; font-size: 12px; font-weight: 700; }
+.collective-footer { display: flex; justify-content: space-between; gap: 28px; margin-top: 27px; color: var(--muted); font-size: 12px; line-height: 1.6; }.collective-footer p { margin: 0; }.collective-footer b { color: var(--ink); }.collective-footer span { color: #398a79; font-weight: 700; }
+
+@media(max-width:900px){.collective{padding:74px 22px}.collective-heading{grid-template-columns:1fr;gap:24px}.therapist-grid{grid-template-columns:repeat(2,1fr)}.collective-placeholder{grid-template-columns:1fr;gap:28px}.tulia-hero{min-height:auto}.tulia-hero::after{right:12%;bottom:0}.nav-link{display:none}}
+@media(max-width:560px){.collective{padding:65px 16px}.therapist-grid{grid-template-columns:1fr}.collective-heading h2{font-size:42px}.therapist-portrait{height:205px}.collective-placeholder{margin-top:35px;padding:27px}.collective-footer{flex-direction:column;gap:10px}.collective-footer span{font-size:11px}}
