@@ -1,0 +1,2 @@
+.admin-forms .admin-zone-form { grid-column: 1/-1; grid-template-columns: minmax(230px,.62fr) minmax(320px,1fr) minmax(170px,.38fr); align-items: end; }.admin-zone-form .admin-form-title { align-self: start; }.admin-zone-form .admin-two { grid-template-columns: 1fr 1fr; }.admin-zone-form .primary-action { margin: 0; }
+@media(max-width:900px){.admin-forms .admin-zone-form{grid-column:auto;grid-template-columns:1fr}.admin-zone-form .primary-action{margin-top:6px}}@media(max-width:560px){.admin-zone-form .admin-two{grid-template-columns:1fr}}

@@ -1,51 +1,83 @@
-# Mombasa Wellness Booking Platform
+# Tulia Wellness Marketplace
 
-Production foundation for a Mombasa studio, home, and hotel massage service. The source of truth is Supabase Postgres/Auth/Storage; booking availability and conflicts are enforced in the database.
+Tulia is a premium marketplace for vetted massage and bodywork in Mombasa. Clients can discover real practitioners and book studio, home, or hotel care; therapists have a private workspace; admins operate the catalogue and collective.
 
-## What is production-ready here
+The production application is `apps/web`: a Next.js 15 application backed by Supabase Auth and Postgres. The `artifacts/` folders are retained only as historical prototype references—do not deploy them or connect them to client data.
 
-- Versioned Supabase schema, RLS policies, private credential references, audit log, and client/therapist/ops roles.
-- Database-level therapist and room exclusion constraints - confirmed bookings cannot double-book.
-- Availability RPC that checks working windows, skills, credentials, delivery eligibility, room capacity, and both travel legs.
-- Atomic booking RPC that calculates the server-side price, serializes same-day booking attempts, holds a slot for ten minutes, and returns controlled errors.
-- Idempotent payment settlement RPC plus Edge Function entry points for payment callbacks and therapist panic alerts.
-- Seed data, CI, dependency updates, and local production setup documentation.
+## What is implemented
 
-## Deliberate boundary
+- Premium public marketplace, treatment discovery, public therapist directory, and deep links into a selected treatment booking flow.
+- Passwordless email and phone authentication with client, therapist, ops, and admin roles.
+- Database-enforced booking availability, travel buffers, room capacity, price calculation, and double-booking protection.
+- Row-level security, private credential records, audit support, payment-callback settlement controls, and panic-alert function entry point.
+- Admin Studio controls for adding service zones, publishing treatments and prices, and creating therapist workspaces after a therapist has authenticated.
 
-`artifacts/wellness-booking` and `artifacts/api-server` are the original Vite/Express prototype. They remain useful for UX reference but are **not the production deployment path**. Do not connect them to live payment or client data. The next web sprint should replace their data layer with the Supabase RPCs and Auth, then deploy the client to Vercel.
+## Hosted Supabase setup
 
-## Local setup
-
-1. Install [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started) and Docker Desktop.
-2. Copy `.env.example` to `.env`; never commit `.env`.
-3. Run `supabase start`.
-4. Run `supabase db reset` to apply migrations and fixtures.
-5. Inspect schema quality with `supabase db lint --local`.
-6. Start the legacy UI only if needed: `pnpm install`, then run the API and web scripts described below.
-
-## Deploy to staging, then production
-
-1. Create separate Supabase projects named `wellness-staging` and `wellness-prod` (Mumbai or Frankfurt only after latency testing from Mombasa).
-2. Link **staging**: `supabase link --project-ref <staging-ref>`.
-3. Review and apply migrations: `supabase db push`.
-4. Set Edge Function secrets with `supabase secrets set --env-file .env.production` (never commit that file).
-5. Deploy functions: `supabase functions deploy payment-callback --no-verify-jwt` and `supabase functions deploy panic-alert`.
-6. Run real-JWT RLS, duplicate callback, concurrent booking, return-travel, and payment reconciliation tests in staging before repeating against production.
-
-## Operational prerequisites before launch
-
-- Choose and onboard Pesapal or IntaSend for M-Pesa, and DPO for cards. Add the provider's exact webhook signature verifier before enabling live callbacks.
-- Configure WhatsApp Business templates, Africa's Talking fallback/number masking, on-call SMS, and a notification dispatcher.
-- Enable Point-in-Time Recovery, configure backups, Sentry, provider alerts, consent/privacy notices, ODPC/DPIA work, and scheduled reconciliation/reminder jobs.
-- Do not put a service-role key, payment secret, or client PII in the browser, logs, or repository.
-
-## Legacy prototype preview
+From the repository root:
 
 ```powershell
-pnpm install
-pnpm --filter @workspace/api-server dev
-pnpm --filter @workspace/wellness-booking dev
+pnpm dlx supabase@latest login
+pnpm dlx supabase@latest link --project-ref YOUR_PROJECT_REF
+pnpm dlx supabase@latest db push
 ```
 
-It serves only local prototype data. Production integrations belong under `supabase/`.
+Create the local app environment file:
+
+```powershell
+Copy-Item apps\web\.env.example apps\web\.env.local
+notepad apps\web\.env.local
+```
+
+Add only the public project values:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+```
+
+Never place a database password, Supabase secret key, service-role key, payment secret, or private credential in this file.
+
+## Run locally
+
+```powershell
+pnpm --filter @mombasa-wellness/web run dev
+```
+
+Open the Local URL that Next prints, normally `http://localhost:3000`.
+
+For email magic links, add that same local URL under **Supabase Dashboard → Authentication → URL Configuration**. Phone sign-in also needs an SMS provider configured in Supabase.
+
+## First marketplace setup
+
+1. Create and sign in with an admin account using `/login`.
+2. In Supabase SQL Editor, promote that authenticated user to admin once:
+
+   ```sql
+   update public.profiles
+   set role = 'admin'
+   where id = 'AUTH_USER_UUID';
+   ```
+
+   Copy `AUTH_USER_UUID` from **Authentication → Users**.
+3. Sign out and in again. Open `/dashboard` to access **Admin Studio**.
+4. Add service zones, then treatments and real prices.
+5. Ask each therapist to sign in once. In Admin Studio, create their therapist workspace using their Supabase Auth User UID.
+6. Review credentials, availability, skills, and coverage before setting a therapist active and publicly vetted. Public directory entries are intentionally limited to active, vetted therapists.
+
+## Verification
+
+```powershell
+pnpm run typecheck
+pnpm --filter @mombasa-wellness/web run build
+```
+
+Before applying a migration to production, preview it first:
+
+```powershell
+pnpm dlx supabase@latest db push --dry-run
+```
+
+## Required before taking live payments
+
+The booking system securely holds a slot, but payment checkout must not be switched on until a real provider is chosen and configured. Before launch, complete the provider-specific checkout and webhook signature verification for M-Pesa/cards, deploy the payment callback function, configure production email/SMS or WhatsApp templates, enable monitoring and backups, and complete Kenyan privacy/consent obligations.

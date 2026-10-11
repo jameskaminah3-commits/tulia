@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import "./styles.css";
 import "./premium.css";
+import "./marketplace.css";
+import "./admin.css";
+import "./admin-overrides.css";
 
 export const metadata: Metadata = {
   title: { default: "Tulia Wellness | Mombasa Massage", template: "%s | Tulia Wellness" },

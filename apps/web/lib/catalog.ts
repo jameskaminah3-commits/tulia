@@ -14,6 +14,7 @@ export type TherapistCard = {
   id: string;
   displayName: string;
   bio: string | null;
+  photoPath: string | null;
   homeZone: string | null;
   servesStudio: boolean;
   servesHome: boolean;
@@ -35,7 +36,7 @@ export async function getCatalog() {
     supabase.from("treatments").select("id, slug, name, description, duration_min").eq("is_active", true).order("sort_order"),
     supabase.from("treatment_pricing").select("treatment_id, mode, price_kes").eq("is_available", true),
     supabase.from("zones").select("id, name").eq("is_serviceable", true).order("name"),
-    supabase.from("therapists").select("id, display_name, bio, home_zone, serves_studio, serves_home, serves_hotel").eq("is_active", true).not("vetted_at", "is", null).order("created_at", { ascending: false }).limit(6),
+    supabase.from("therapists").select("id, display_name, bio, photo_path, home_zone, serves_studio, serves_home, serves_hotel").eq("is_active", true).not("vetted_at", "is", null).order("created_at", { ascending: false }).limit(18),
   ]);
 
   const prices = new Map<string, TreatmentOption["prices"]>();
@@ -62,6 +63,7 @@ export async function getCatalog() {
       id: row.id,
       displayName: row.display_name,
       bio: row.bio,
+      photoPath: row.photo_path,
       homeZone: row.home_zone,
       servesStudio: row.serves_studio,
       servesHome: row.serves_home,

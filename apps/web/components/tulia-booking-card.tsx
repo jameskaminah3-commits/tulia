@@ -19,9 +19,9 @@ const money = (value: number | undefined) => value ? new Intl.NumberFormat("en-K
 const time = (value: string) => new Intl.DateTimeFormat("en-KE", { hour: "numeric", minute: "2-digit", timeZone: "Africa/Nairobi" }).format(new Date(value));
 const longDate = (value: string) => new Intl.DateTimeFormat("en-KE", { weekday: "long", day: "numeric", month: "long", timeZone: "Africa/Nairobi" }).format(new Date(`${value}T12:00:00+03:00`));
 
-export function TuliaBookingCard({ treatments, zones, configured, liveCatalog }: { treatments: TreatmentOption[]; zones: ZoneOption[]; configured: boolean; liveCatalog: boolean }) {
+export function TuliaBookingCard({ treatments, zones, configured, liveCatalog, initialTreatmentSlug }: { treatments: TreatmentOption[]; zones: ZoneOption[]; configured: boolean; liveCatalog: boolean; initialTreatmentSlug?: string }) {
   const [step, setStep] = useState<Step>(1);
-  const [treatmentId, setTreatmentId] = useState(treatments[0]?.id ?? "");
+  const [treatmentId, setTreatmentId] = useState(() => treatments.find((item) => item.slug === initialTreatmentSlug)?.id ?? treatments[0]?.id ?? "");
   const [mode, setMode] = useState<Mode>("studio");
   const [date, setDate] = useState(kenyaToday);
   const [zone, setZone] = useState(zones.find((item) => item.id === "nyali")?.id ?? zones[0]?.id ?? "");
