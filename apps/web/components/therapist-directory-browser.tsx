@@ -45,7 +45,7 @@ export function TherapistDirectoryBrowser({ therapists }: { therapists: Therapis
             <h2>{therapist.displayName}</h2>
             <span className="therapist-services">{services}</span>
             <small>{therapist.bio ?? "A vetted Tulia practitioner, ready to create a more restorative day."}</small>
-            <Link className="profile-book" href="/book">Explore availability <span>→</span></Link>
+            <Link className="profile-book" href={`/therapists/${therapist.id}`}>View profile <span>→</span></Link>
           </div>
         </article>;
       })}

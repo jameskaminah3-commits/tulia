@@ -71,3 +71,8 @@ export async function getCatalog() {
     })),
   };
 }
+
+export async function getPublicTherapist(id: string) {
+  const catalog = await getCatalog();
+  return catalog.therapists.find((therapist) => therapist.id === id) ?? null;
+}

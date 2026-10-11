@@ -19,7 +19,7 @@ const money = (value: number | undefined) => value ? new Intl.NumberFormat("en-K
 const time = (value: string) => new Intl.DateTimeFormat("en-KE", { hour: "numeric", minute: "2-digit", timeZone: "Africa/Nairobi" }).format(new Date(value));
 const longDate = (value: string) => new Intl.DateTimeFormat("en-KE", { weekday: "long", day: "numeric", month: "long", timeZone: "Africa/Nairobi" }).format(new Date(`${value}T12:00:00+03:00`));
 
-export function TuliaBookingCard({ treatments, zones, configured, liveCatalog, initialTreatmentSlug }: { treatments: TreatmentOption[]; zones: ZoneOption[]; configured: boolean; liveCatalog: boolean; initialTreatmentSlug?: string }) {
+export function TuliaBookingCard({ treatments, zones, configured, liveCatalog, initialTreatmentSlug, initialTherapistId }: { treatments: TreatmentOption[]; zones: ZoneOption[]; configured: boolean; liveCatalog: boolean; initialTreatmentSlug?: string; initialTherapistId?: string }) {
   const [step, setStep] = useState<Step>(1);
   const [treatmentId, setTreatmentId] = useState(() => treatments.find((item) => item.slug === initialTreatmentSlug)?.id ?? treatments[0]?.id ?? "");
   const [mode, setMode] = useState<Mode>("studio");
@@ -66,7 +66,11 @@ export function TuliaBookingCard({ treatments, zones, configured, liveCatalog, i
     const { data, error } = await supabase.rpc("available_slots", { p_treatment_id: treatment.id, p_date: date, p_mode: mode, p_zone: mode === "studio" ? null : zone, p_gender: null });
     setBusy(false);
     if (error) setStatus(error.message);
-    else { setSlots((data ?? []) as Slot[]); setStatus(data?.length ? "Choose a time. It is rechecked before it is held." : "No openings match those details yet. Please try another day or location."); }
+    else {
+      const available = ((data ?? []) as Slot[]).filter((item) => !initialTherapistId || item.therapist_id === initialTherapistId);
+      setSlots(available);
+      setStatus(available.length ? "Choose a time. It is rechecked before it is held." : "No openings match those details yet. Please try another day or location.");
+    }
   }
   async function holdTime() {
     if (!supabase || !treatment || !slot) return;

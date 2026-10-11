@@ -50,6 +50,8 @@ For email magic links, add that same local URL under **Supabase Dashboard → Au
 
 ## First marketplace setup
 
+The local seed creates a working demo marketplace with three vetted therapists, verified safety credentials, future availability windows, service zones, rooms, and the three signature treatments. Run `supabase db reset` locally to load it. The demo identities are `admin@tulia.example`, `amina.kimani@tulia.example`, `zawadi.mwangi@tulia.example`, `neema.otieno@tulia.example`, and `client@tulia.example`; the app still uses passwordless email/phone sign-in, so use Supabase local email capture or replace these identities with real authenticated users before production.
+
 1. Create and sign in with an admin account using `/login`.
 2. In Supabase SQL Editor, promote that authenticated user to admin once:
 
@@ -62,8 +64,9 @@ For email magic links, add that same local URL under **Supabase Dashboard → Au
    Copy `AUTH_USER_UUID` from **Authentication → Users**.
 3. Sign out and in again. Open `/dashboard` to access **Admin Studio**.
 4. Add service zones, then treatments and real prices.
-5. Ask each therapist to sign in once. In Admin Studio, create their therapist workspace using their Supabase Auth User UID.
-6. Review credentials, availability, skills, and coverage before setting a therapist active and publicly vetted. Public directory entries are intentionally limited to active, vetted therapists.
+5. Ask each therapist to sign in once. In Admin Studio, save their private profile using their Supabase Auth User UID.
+6. Verify TVETA/CDACC, good-conduct, and insurance records in Admin Studio.
+7. Add availability in Africa/Nairobi time, then publish the profile. Public directory entries are intentionally limited to active, vetted therapists.
 
 ## Verification
 
