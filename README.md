@@ -14,12 +14,12 @@ The production application is `apps/web`: a Next.js 15 application backed by Sup
 
 ## Hosted Supabase setup
 
-From the repository root:
+From the repository root. The Supabase CLI is pinned in this workspace, so use the project command on Windows and in CI:
 
 ```powershell
-pnpm dlx supabase@latest login
-pnpm dlx supabase@latest link --project-ref YOUR_PROJECT_REF
-pnpm dlx supabase@latest db push
+pnpm supabase login
+pnpm supabase link --project-ref YOUR_PROJECT_REF
+pnpm supabase db push
 ```
 
 Create the local app environment file:
@@ -50,7 +50,7 @@ For email magic links, add that same local URL under **Supabase Dashboard → Au
 
 ## First marketplace setup
 
-The local seed creates a working demo marketplace with three vetted therapists, verified safety credentials, future availability windows, service zones, rooms, and the three signature treatments. Run `supabase db reset` locally to load it. The demo identities are `admin@tulia.example`, `amina.kimani@tulia.example`, `zawadi.mwangi@tulia.example`, `neema.otieno@tulia.example`, and `client@tulia.example`; the app still uses passwordless email/phone sign-in, so use Supabase local email capture or replace these identities with real authenticated users before production.
+The local seed creates a working demo marketplace with three vetted therapists, verified safety credentials, future availability windows, service zones, rooms, and the three signature treatments. Start Docker Desktop, then run `pnpm supabase db reset` locally to load it. The demo identities are `admin@tulia.example`, `amina.kimani@tulia.example`, `zawadi.mwangi@tulia.example`, `neema.otieno@tulia.example`, and `client@tulia.example`; the app still uses passwordless email/phone sign-in, so use Supabase local email capture or replace these identities with real authenticated users before production.
 
 1. Create and sign in with an admin account using `/login`.
 2. In Supabase SQL Editor, promote that authenticated user to admin once:
@@ -78,7 +78,7 @@ pnpm --filter @mombasa-wellness/web run build
 Before applying a migration to production, preview it first:
 
 ```powershell
-pnpm dlx supabase@latest db push --dry-run
+pnpm supabase db push --dry-run
 ```
 
 ## Required before taking live payments
